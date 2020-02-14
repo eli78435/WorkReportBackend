@@ -9,6 +9,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using MongoDB.Driver;
+using WorkReportServer.Repositories;
 
 namespace WorkReportServer
 {
@@ -35,6 +37,13 @@ namespace WorkReportServer
                             .AllowAnyHeader();
                     });
             });
+
+            var mongoClientSettings = new MongoClientSettings
+            {
+                Credential = MongoCredential.CreateCredential("admin", "root", "example"),
+                Server = new MongoServerAddress("mongo", 27017),
+            };
+            services.AddSingleton<IReportOperationsProvider, ReportsMongoRepositoryProvider>(sp => new ReportsMongoRepositoryProvider(mongoClientSettings));
 
             services.AddControllers();
         }

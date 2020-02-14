@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -12,38 +13,42 @@ namespace WorkReportServer.Controllers
     public class TimeReportsController : ControllerBase
     {
         private readonly ILogger<TimeReportsController> _logger;
-        private static List<TimeReport> _reports = new List<TimeReport>();
+        private readonly IReportOperations _reportOperations;
 
-        public TimeReportsController(ILogger<TimeReportsController> logger)
+        public TimeReportsController(ILogger<TimeReportsController> logger, IReportOperationsProvider reportOperationsProvider)
         {
             _logger = logger;
+            _reportOperations = reportOperationsProvider.CreateReportOperations();
         }
 
 
         [HttpGet]
-        public IEnumerable<TimeReport> GetReports()
+        public async Task<IActionResult> GetReports()
         {
-            return _reports;
+            var reports = await _reportOperations.GetReports();
+            return Ok(reports);
         }
         
         [HttpPost]
-        public void AddReport(TimeReport report)
+        public async Task<IActionResult> AddReport(TimeReport report)
         {
-            assertAddReport(report);
+            AssertAddReport(report);
 
             _logger.LogInformation($"add");
-            _reports.Add(report);
+            await _reportOperations.AddReport(report);
+            return Ok();
         }
 
         [HttpPut]
-        public void UpdateReport(TimeReport report)
+        public async Task<IActionResult> UpdateReport(TimeReport report)
         {
-            assertUpdateeport(report);
-            var existing = _reports.First(r => r.Id == report.Id);
-            existing.End = report.End;
+            AssertUpdateReport(report);
+            Debug.Assert(report.End != null);
+            await _reportOperations.UpdateEndReportTime(report.Id, report.End.Value);
+            return Ok();
         }
 
-        private void assertAddReport(TimeReport report)
+        private void AssertAddReport(TimeReport report)
         {
             if (string.IsNullOrWhiteSpace(report.Id))
                 throw new ArgumentNullException(nameof(report.Id));
@@ -53,12 +58,9 @@ namespace WorkReportServer.Controllers
 
             if (report.End.HasValue)
                 throw new ArgumentException(nameof(report.End));
-
-            if (_reports.Any(r => r.Id == report.Id))
-                throw new ApplicationException($"report id {report.Id} already exist");
         }
 
-        private void assertUpdateeport(TimeReport report)
+        private void AssertUpdateReport(TimeReport report)
         {
             if (string.IsNullOrWhiteSpace(report.Id))
                 throw new ArgumentNullException(nameof(report.Id));
@@ -68,9 +70,6 @@ namespace WorkReportServer.Controllers
 
             if (report.End == null)
                 throw new ArgumentException(nameof(report.End));
-
-            if (! _reports.Any(r => r.Id == report.Id))
-                throw new ApplicationException($"report id {report.Id} not exist, can't update");
         }
     }
 }
