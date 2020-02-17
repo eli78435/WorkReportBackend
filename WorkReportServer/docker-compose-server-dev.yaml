@@ -1,0 +1,17 @@
+﻿version: '3.1'
+
+services:
+
+    server-asp:
+        build:
+            context: ../.
+            dockerfile: ./WorkReportServer/Dockerfile
+        ports:
+            - 8082:80
+        networks: 
+            - default
+            
+networks:
+    default:
+        external:
+            name: report-bridge-network
